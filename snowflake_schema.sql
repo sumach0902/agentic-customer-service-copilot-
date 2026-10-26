@@ -1,0 +1,19 @@
+-- Snowflake schema this demo mirrors.
+-- Locally the same tables live in SQLite (data/customer.db) so the
+-- demo runs with no Snowflake account. In production, replace the
+-- SQLite connection with Snowflake secure views and role-based access:
+-- a customer session may only query rows for its own customer_id.
+--
+--   CUSTOMERS (customer_id, name, email, phone, segment)
+--   CUSTOMER_ACCOUNTS (customer_id, account_id, account_type, status, balance, opened_date)
+--   ACTIVITY_HISTORY (customer_id, activity_date, description, amount, direction)
+--   TICKET_STATUS (ticket_id, customer_id, subject, status, opened_date, next_step)
+--
+-- Example agent query (same shape in SQLite and Snowflake):
+--   SELECT * FROM CUSTOMER_ACCOUNTS WHERE customer_id = :customer_id;
+--   SELECT * FROM TICKET_STATUS
+--    WHERE ticket_id = :ticket_id AND customer_id = :customer_id;
+--
+-- Policy documents would live in a governed document store with
+-- version, effective_date, and status columns; only status = 'current'
+-- rows are retrievable. See copilot/retrieval.py.

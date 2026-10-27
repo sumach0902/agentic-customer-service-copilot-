@@ -1,6 +1,6 @@
 """RAG retrieval over policy documents, with no external service.
 
-Design choices worth talking about in the interview:
+Key architectural design choices:
 - Chunk by section, so a rule stays with its exception.
 - Metadata filter BEFORE ranking: only current versions, only the
   effective version, never a superseded document.

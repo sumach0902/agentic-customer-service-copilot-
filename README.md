@@ -13,6 +13,23 @@ This is a working prototype on synthetic data, built to be pilot-ready. It is re
 - **Privacy by design:** account numbers, emails, and phones are masked in answers; retrieval is always scoped to one customer.
 - **Evaluation, not vibes:** a 30-question golden set. Run `python3 evaluate.py` after every change.
 
+## Architecture & Visual Design
+
+### 1. End-to-End System Architecture
+Connecting client interfaces, safety guardrails, dual-branch execution (RDBMS facts vs. RAG policy retrieval), and continuous automated evaluation.
+
+![System Architecture](docs/images/system_architecture.jpg)
+
+### 2. Code Execution Flow & Calling Sequence
+Step-by-step numbered execution sequence showing how incoming requests are checked against guardrails, categorized by intent, routed to specialized tools, and synthesized into verified answers.
+
+![Code Execution Flow](docs/images/code_execution_flow.jpg)
+
+### 3. Database Schema Design (RDBMS)
+Hub-and-spoke relational schema (SQLite / Snowflake) enforcing strict tenant scoping (`WHERE customer_id = ?`) to eliminate cross-customer data leakage.
+
+![Database Schema Design](docs/images/schema_design.jpg)
+
 ## Run it in 2 minutes (no API key, no install)
 
 ```bash
@@ -63,9 +80,9 @@ streamlit run app.py
 4. **Answer with sources:** Snowflake-style table names for structured facts; policy title, section, version, and effective date for document facts.
 5. **Escalate when unsure:** no current policy, no ticket for this customer, or low retrieval confidence means a handoff, not a guess.
 
-## The stale-policy trap (a good interview story)
+## Policy Governance: Preventing Stale-Policy Hallucinations
 
-The policies folder contains a superseded Savings fees document (v1.0, $25 monthly fee) alongside the current one (v2.0, no monthly fee). The retriever excludes `status != current` before ranking, so the old fee can never be cited, no matter how well it matches. If you remove that filter, the demo will happily quote the wrong fee. That is exactly the kind of silent failure an FDE has to design out.
+The policies folder contains a superseded Savings fees document (v1.0, $25 monthly fee) alongside the current one (v2.0, no monthly fee). The retriever excludes `status != current` before ranking, so the old fee can never be cited, no matter how well it matches. If you remove that filter, the demo will quote the wrong fee. That is exactly the kind of silent failure production AI systems must design out.
 
 ## Project structure
 
@@ -89,9 +106,9 @@ snowflake_schema.sql  Production schema mapping
 python3 evaluate.py
 ```
 
-It checks intent accuracy, source/citation accuracy, and escalation accuracy, and writes `results/eval_results.json`. Quote the numbers from your own run in the interview, not from this README, so they are always true for the code you show.
+It checks intent accuracy, source/citation accuracy, and escalation accuracy, and writes `results/eval_results.json`. Always run this script directly to verify the latest benchmark figures for your deployment.
 
-## What I would do next (say this when they ask)
+## Next Steps & Roadmap
 
 1. Pilot as agent-assist first: human agents approve or correct drafts in shadow mode, so learning is fast and customers see no risk.
 2. Add a real LLM for answer wording only, keeping retrieval, citations, and guardrails exactly as they are here, so the model cannot invent facts.
@@ -105,6 +122,6 @@ It checks intent accuracy, source/citation accuracy, and escalation accuracy, an
 - Retrieve another customer's records.
 - Use real customer data, API keys, or a paid service.
 
-## Interview talk track
+## Demo Walkthrough Guide
 
 See `DEMO_SCRIPT.md` for the 5-minute version: problem, live demo, architecture, two real issues and fixes, and how it runs today.

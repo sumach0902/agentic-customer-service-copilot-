@@ -1,4 +1,4 @@
-"""Golden-set evaluation: the number Suma can quote in the interview.
+"""Golden-set evaluation: automated benchmarks for intent, citation, and escalation accuracy.
 
 Each case checks three things: intent was right, a citation/source was
 present when one was expected, and escalation happened exactly when

@@ -3,7 +3,7 @@
 Run:  python3 server.py
 Then open http://localhost:8000 in a browser.
 
-This is the visual demo for the interview if Streamlit is not
+This is the zero-dependency visual web demo when Streamlit is not
 installed. The CLI (cli.py) shows the same answers in a terminal.
 """
 import json

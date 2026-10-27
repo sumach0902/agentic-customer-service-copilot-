@@ -1,6 +1,6 @@
 """The agent: intent, tools, guardrails, and handoff.
 
-Rules the agent never breaks (say these in the interview):
+Core governance rules enforced by the agent:
 1. Structured facts come only from this customer's records.
 2. Policy facts come only from current retrieved documents, with citations.
 3. If a claim has no source, it does not go out.

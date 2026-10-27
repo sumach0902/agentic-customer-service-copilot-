@@ -118,17 +118,17 @@ class Agent:
 
         # 1. Targeted: Balance only
         if has_balance and not has_status and not has_activity:
-            text = f"Hi {customer['name']}, your current balance for {account['account_type']} {account['display_number']} is ${account['balance']:,.2f}."
+            text = f"Your current balance for {account['account_type']} {account['display_number']} is ${account['balance']:,.2f}."
             return Answer(text, intent="account_question", sources=[source])
 
         # 2. Targeted: Status only
         if has_status and not has_balance and not has_activity:
-            text = f"Hi {customer['name']}, your {account['account_type']} account {account['display_number']} is currently {account['status']} (opened on {account['opened_date']})."
+            text = f"Your {account['account_type']} account {account['display_number']} is currently {account['status']} (opened on {account['opened_date']})."
             return Answer(text, intent="account_question", sources=[source])
 
         # 3. Targeted: Recent Activity / Transactions only
         if has_activity and not has_balance and not has_status:
-            lines = [f"Hi {customer['name']}, here is your recent activity for {account['account_type']} {account['display_number']}:"]
+            lines = [f"Here is your recent activity for {account['account_type']} {account['display_number']}:"]
             for item in activity:
                 sign = "+" if item["direction"] == "Credit" else "-"
                 lines.append(f"- {item['activity_date']}: {item['description']} ({sign}${abs(item['amount']):,.2f})")
@@ -136,7 +136,7 @@ class Agent:
 
         # 4. Comprehensive summary (when multiple aspects or summary requested)
         lines = [
-            f"Hi {customer['name']}, here is your account summary:",
+            "Here is your account summary:",
             f"Account: {account['account_type']} {account['display_number']} - Status: {account['status']}",
             f"Balance: ${account['balance']:,.2f}",
             "Recent activity:",

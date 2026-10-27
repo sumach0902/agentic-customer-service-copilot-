@@ -112,11 +112,6 @@ else:
             
             st.markdown(msg["content"])
             
-            if msg.get("sources"):
-                with st.expander("📌 Verified Sources & Citations"):
-                    for s in msg["sources"]:
-                        st.caption(f"• {s}")
-            
             if msg.get("handoff_note"):
                 st.info(f"📋 **Handoff Note (for human agent):**\n\n*{msg['handoff_note']}*")
 

@@ -153,9 +153,6 @@ class Agent:
         for _score, chunk in results:
             parts.append(f"\n{chunk['text']}")
             sources.append(citation(chunk))
-        parts.append("\nSources:")
-        for source in sources:
-            parts.append(f"- {source}")
         return Answer("\n".join(parts), intent="product_guidance", sources=sources)
 
     # -- main entry point --------------------------------------------------

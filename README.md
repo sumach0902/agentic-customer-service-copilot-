@@ -1,8 +1,8 @@
 # Agentic Customer Service Copilot
 
-A working demo for an FDE interview: an agentic copilot for customer servicing that answers account questions, ticket status, and product guidance, with citations and human escalation.
+An agentic copilot for customer servicing that answers account questions, ticket status, and product guidance, with citations and human escalation.
 
-**Honest scope, say this in the interview:** this is a working prototype on synthetic data, built to be pilot-ready. It is read-only by design. It never takes a payment, refund, transfer, or account change, and it never claims to have done so. That restraint is the point.
+This is a working prototype on synthetic data, built to be pilot-ready. It is read-only by design. It never takes a payment, refund, transfer, or account change, and it never claims to have done so. That restraint is the point.
 
 ## What it demonstrates
 

@@ -4,7 +4,7 @@ This is a banking customer service agent. It’s connected to three sources: the
 
 A basic chatbot returns a generic answer or a link to a policy page. This agent first looks up the customer’s own data, such as their account or ticket status, then combines it with the current policy to give a specific answer.
 
-We built it to reduce hallucination. It doesn’t guess. It reads from the integrated sources, cites where the answer came from, and if it has no source, it hands off to a human.
+I built it to reduce hallucination. It doesn’t guess. It reads from the integrated sources, cites where the answer came from, and if it has no source, it hands off to a human.
 
 For anything serious or risky, like cancellations, transfers, refunds or complaints, it doesn’t attempt the action. It escalates to a human agent with the context attached, so the customer doesn’t have to repeat themselves.
 

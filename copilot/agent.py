@@ -89,7 +89,7 @@ class Agent:
             return "product_guidance"
         if any(word in q for word in
                ["product", "plan", "feature", "fee", "fees", "how does",
-                "what is", "coverage", "limit", "interest rate", "sla",
+                "coverage", "limit", "interest rate", "sla",
                 "how long", "delivery", "replacement", "policy"]):
             return "product_guidance"
         return "unknown"
@@ -179,12 +179,15 @@ class Agent:
             return self._ticket_answer(customer_id, question)
         if intent == "product_guidance":
             return self._product_answer(question)
-        # Unknown: try retrieval once, otherwise escalate honestly.
+        # Greetings
+        q_clean = question.lower().strip().rstrip("!?.,")
+        if q_clean in ["hi", "hello", "hey", "good morning", "good afternoon", "good evening", "greetings"]:
+            return Answer("Hello! I am your Customer Service Copilot. I can help you check your account balance and recent transactions, look up support tickets, or answer questions about our banking policies. How can I assist you today?",
+                          intent="greeting", escalated=False)
+
+        # Unknown / General: try retrieval once, otherwise deflect politely without escalating
         results = self.retriever.retrieve(question, top_k=1)
         if results and results[0][0] >= 0.30:
             return self._product_answer(question)
-        return Answer("I am not confident I have a current, approved answer for "
-                      "that yet, so I would rather hand you to an agent than "
-                      "risk a wrong answer.",
-                      intent="unknown", escalated=True,
-                      handoff_note=f"Low-confidence question: '{question}'.")
+        return Answer("I am your Customer Service Copilot, specialized in assisting with your accounts, recent transactions, support tickets, and banking policies. I don't have information on general topics outside of our banking services, but I'm happy to help with any account or ticket inquiry!",
+                      intent="out_of_scope", escalated=False)

@@ -1,4 +1,4 @@
-# 5-Minute Demo Script (say this, in this order)
+# 5-Minute Demo Script 
 
 ## 1. Problem, 1 minute
 

@@ -8,8 +8,6 @@ I built it to reduce hallucination. It doesn’t guess. It reads from the integr
 
 For anything serious or risky, like cancellations, transfers, refunds or complaints, it doesn’t attempt the action. It escalates to a human agent with the context attached, so the customer doesn’t have to repeat themselves.
 
-An agentic copilot for customer servicing that answers account questions, ticket status, and product guidance, with citations and human escalation.
-
 This is a working prototype on synthetic data, built to be pilot-ready. It is read-only by design. It never takes a payment, refund, transfer, or account change, and it never claims to have done so. That restraint is the point.
 
 ## What it demonstrates

@@ -19,12 +19,19 @@ if "customer_id" not in st.session_state:
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
+# Predefined demo credentials (supports individual password or universal fallback)
+USER_PASSWORDS = {
+    "CUST-1001": "priya123",
+    "CUST-1002": "arjun123",
+    "CUST-1003": "maya123",
+}
+
 # ==============================================================================
 # 1. Login Screen (Unauthenticated)
 # ==============================================================================
 if not st.session_state.customer_id:
     st.markdown("<h1 style='text-align: center;'>Secure Customer Portal</h1>", unsafe_allow_html=True)
-    st.markdown("<p style='text-align: center; color: #888;'>Sign in to your banking account to connect with the Customer Service Copilot</p>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align: center; color: #888;'>Enter your credentials to access your account and chat with the Copilot</p>", unsafe_allow_html=True)
     st.write("")
 
     col_left, col_center, col_right = st.columns([1, 2, 1])
@@ -32,38 +39,39 @@ if not st.session_state.customer_id:
         with st.container(border=True):
             st.subheader("Customer Sign In")
             
-            personas = {
-                "CUST-1001": "Priya Sharma (CUST-1001) - Savings Account",
-                "CUST-1002": "Arjun Patel (CUST-1002) - Checking Account",
-                "CUST-1003": "Maya Chen (CUST-1003) - Savings Account",
-            }
-            selected_id = st.selectbox(
-                "Select Account Persona",
-                list(personas.keys()),
-                format_func=lambda x: personas[x]
-            )
+            user_id_input = st.text_input("Customer ID", placeholder="e.g. CUST-1001")
+            password_input = st.text_input("Password", type="password", placeholder="Enter your password")
             
-            cust_preview = data.get_customer(data.DB_PATH, selected_id)
-            acct_preview = data.get_account(data.DB_PATH, selected_id)
-            
-            if cust_preview and acct_preview:
-                st.info(f"**Customer:** {cust_preview['name']} ({cust_preview['segment']} Tier)\n\n"
-                        f"**Account:** {acct_preview['account_type']} (`{acct_preview['display_number']}`)\n\n"
-                        f"**Status:** {acct_preview['status']}")
-            
+            with st.expander("🔑 Demo Login Credentials"):
+                st.markdown("""
+                | Customer ID | Name | Password |
+                | :--- | :--- | :--- |
+                | `CUST-1001` | Priya Sharma | `priya123` |
+                | `CUST-1002` | Arjun Patel | `arjun123` |
+                | `CUST-1003` | Maya Chen | `maya123` |
+                *(Fallback password `password123` also works for all accounts)*
+                """)
+
             if st.button("Sign In to Copilot", type="primary", use_container_width=True):
-                st.session_state.customer_id = selected_id
-                st.session_state.messages = [
-                    {
-                        "role": "assistant",
-                        "content": f"Hi {cust_preview['name']}, I am your Customer Service Copilot. How can I help you today? You can ask about your account status, recent transactions, support tickets, or product policies.",
-                        "intent": "greeting",
-                        "sources": [],
-                        "escalated": False,
-                        "handoff_note": ""
-                    }
-                ]
-                st.rerun()
+                uid = (user_id_input or "").strip().upper()
+                pwd = (password_input or "").strip()
+                
+                if uid in USER_PASSWORDS and (pwd == USER_PASSWORDS[uid] or pwd == "password123"):
+                    cust_profile = data.get_customer(data.DB_PATH, uid)
+                    st.session_state.customer_id = uid
+                    st.session_state.messages = [
+                        {
+                            "role": "assistant",
+                            "content": f"Hi {cust_profile['name']}, I am your Customer Service Copilot. How can I help you today? You can ask about your account status, recent transactions, support tickets, or product policies.",
+                            "intent": "greeting",
+                            "sources": [],
+                            "escalated": False,
+                            "handoff_note": ""
+                        }
+                    ]
+                    st.rerun()
+                else:
+                    st.error("Invalid Customer ID or Password. Please check the credentials above.")
 
 # ==============================================================================
 # 2. Authenticated Real-Time Chat Screen

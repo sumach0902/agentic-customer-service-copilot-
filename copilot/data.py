@@ -94,6 +94,17 @@ def get_account(db_path, customer_id):
     return dict(row) if row else None
 
 
+def list_accounts(db_path, customer_id):
+    """List all accounts owned by a customer."""
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    rows = conn.execute(
+        "SELECT * FROM accounts WHERE customer_id = ?", (customer_id,)
+    ).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
 def get_recent_activity(db_path, customer_id, limit=3):
     conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row

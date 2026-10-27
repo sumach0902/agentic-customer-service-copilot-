@@ -1,4 +1,4 @@
-"""Streamlit Web UI for the Customer Service Copilot.
+"""Streamlit Web UI with Customer Login & Real-Time Chat.
 
 Run: streamlit run app.py
 """
@@ -11,50 +11,122 @@ from copilot.data import init_db
 init_db()
 agent = Agent()
 
-st.set_page_config(page_title="Customer Service Copilot", layout="wide")
-st.title("Customer Service Copilot")
-st.caption("Enterprise Agentic AI: Scoped Read-Only Truth, Versioned Policy Governance & Guardrails")
+st.set_page_config(page_title="Customer Service Copilot", page_icon="💬", layout="wide")
 
-col1, col2 = st.columns([1, 2])
+# Manage login session state
+if "customer_id" not in st.session_state:
+    st.session_state.customer_id = None
+if "messages" not in st.session_state:
+    st.session_state.messages = []
 
-with col1:
-    st.subheader("Customer Profile")
-    customer = st.selectbox("Active Customer Context", ["CUST-1001", "CUST-1002", "CUST-1003"])
-    
-    cust_record = data.get_customer(data.DB_PATH, customer)
-    acct_record = data.get_account(data.DB_PATH, customer)
-    
-    if cust_record and acct_record:
-        st.info(f"""
-        **Name:** {cust_record['name']}  
-        **Tier:** {cust_record['segment']} Customer  
-        **Account:** {acct_record['account_type']} (`{acct_record['display_number']}`)  
-        **Status:** {acct_record['status']}  
-        **Contact:** `{mask_email(cust_record['email'])}`
-        """)
+# ==============================================================================
+# 1. Login Screen (Unauthenticated)
+# ==============================================================================
+if not st.session_state.customer_id:
+    st.markdown("<h1 style='text-align: center;'>Secure Customer Portal</h1>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align: center; color: #888;'>Sign in to your banking account to connect with the Customer Service Copilot</p>", unsafe_allow_html=True)
+    st.write("")
 
-with col2:
-    st.subheader("Copilot Assistance")
-    question = st.text_input(
-        "Customer Inquiry",
-        placeholder="Ask about account status, ticket status, or product guidance..."
-    )
-    
-    if st.button("Ask Copilot", type="primary") and question:
-        answer = agent.ask(customer, question)
+    col_left, col_center, col_right = st.columns([1, 2, 1])
+    with col_center:
+        with st.container(border=True):
+            st.subheader("Customer Sign In")
+            
+            personas = {
+                "CUST-1001": "Priya Sharma (CUST-1001) - Savings Account",
+                "CUST-1002": "Arjun Patel (CUST-1002) - Checking Account",
+                "CUST-1003": "Maya Chen (CUST-1003) - Savings Account",
+            }
+            selected_id = st.selectbox(
+                "Select Account Persona",
+                list(personas.keys()),
+                format_func=lambda x: personas[x]
+            )
+            
+            cust_preview = data.get_customer(data.DB_PATH, selected_id)
+            acct_preview = data.get_account(data.DB_PATH, selected_id)
+            
+            if cust_preview and acct_preview:
+                st.info(f"**Customer:** {cust_preview['name']} ({cust_preview['segment']} Tier)\n\n"
+                        f"**Account:** {acct_preview['account_type']} (`{acct_preview['display_number']}`)\n\n"
+                        f"**Status:** {acct_preview['status']}")
+            
+            if st.button("Sign In to Copilot", type="primary", use_container_width=True):
+                st.session_state.customer_id = selected_id
+                st.session_state.messages = [
+                    {
+                        "role": "assistant",
+                        "content": f"Hi {cust_preview['name']}, I am your Customer Service Copilot. How can I help you today? You can ask about your account status, recent transactions, support tickets, or product policies.",
+                        "intent": "greeting",
+                        "sources": [],
+                        "escalated": False,
+                        "handoff_note": ""
+                    }
+                ]
+                st.rerun()
+
+# ==============================================================================
+# 2. Authenticated Real-Time Chat Screen
+# ==============================================================================
+else:
+    customer_id = st.session_state.customer_id
+    cust = data.get_customer(data.DB_PATH, customer_id)
+    acct = data.get_account(data.DB_PATH, customer_id)
+
+    # Sidebar: Authenticated User Profile & Session Controls
+    with st.sidebar:
+        st.subheader("Authenticated Account")
+        if cust and acct:
+            st.markdown(f"### 👤 {cust['name']}")
+            st.markdown(f"**ID:** `{cust['customer_id']}`")
+            st.markdown(f"**Tier:** {cust['segment']}")
+            st.markdown(f"**Account:** {acct['account_type']} (`{acct['display_number']}`)")
+            st.markdown(f"**Status:** {acct['status']}")
+            st.markdown(f"**Verified Contact:** `{mask_email(cust['email'])}`")
+        
         st.divider()
-        if answer.escalated:
-            st.warning("🛡️ **Escalation Triggered:** Handed off to human agent (copilot is strictly read-only).")
-        else:
-            st.success("✅ **Verified Answer Generated**")
+        st.caption("🔒 **Tenant Isolation:** All database and ticket queries in this session are strictly scoped to `customer_id`.")
         
-        st.markdown(f"**Classified Intent:** `{answer.intent}`")
-        st.markdown(answer.text)
-        
-        if answer.sources:
-            st.markdown("**Citations & Sources:**")
-            for source in answer.sources:
-                st.caption(f"📌 {source}")
-        
-        if answer.handoff_note:
-            st.info(f"📋 **Human Agent Handoff Note:**\n\n*{answer.handoff_note}*")
+        if st.button("Log Out / Switch Persona", use_container_width=True):
+            st.session_state.customer_id = None
+            st.session_state.messages = []
+            st.rerun()
+
+    # Main Area: Real-Time Chat Stream
+    st.title("Customer Service Copilot")
+    st.caption(f"Logged in as **{cust['name']}** (`{cust['customer_id']}`) • Read-Only Scoped AI Copilot")
+
+    # Render previous conversation history
+    for msg in st.session_state.messages:
+        with st.chat_message(msg["role"]):
+            if msg.get("escalated"):
+                st.warning("🛡️ **Escalation Triggered:** Handed off to human agent (copilot is strictly read-only).")
+            
+            st.markdown(msg["content"])
+            
+            if msg.get("sources"):
+                with st.expander("📌 Verified Sources & Citations"):
+                    for s in msg["sources"]:
+                        st.caption(f"• {s}")
+            
+            if msg.get("handoff_note"):
+                st.info(f"📋 **Handoff Note (for human agent):**\n\n*{msg['handoff_note']}*")
+
+    # Real-time chat input field
+    if prompt := st.chat_input("Ask about your account, a ticket, or product policies..."):
+        # 1. Append user turn
+        st.session_state.messages.append({"role": "user", "content": prompt})
+
+        # 2. Query Copilot Agent
+        answer = agent.ask(customer_id, prompt)
+
+        # 3. Append assistant turn
+        st.session_state.messages.append({
+            "role": "assistant",
+            "content": answer.text,
+            "intent": answer.intent,
+            "sources": answer.sources,
+            "escalated": answer.escalated,
+            "handoff_note": answer.handoff_note
+        })
+        st.rerun()

@@ -8,6 +8,7 @@ Core governance rules enforced by the agent:
    low-confidence answers go to a human, with full context, and the
    agent never claims the action is done.
 """
+import math
 import re
 from dataclasses import dataclass, field
 
@@ -45,6 +46,9 @@ class Answer:
     sources: list = field(default_factory=list)
     escalated: bool = False
     handoff_note: str = ""
+    temperature: float = 0.1
+    context_window: int = 2048
+    tokens_used: int = 0
 
 
 class Agent:
@@ -155,39 +159,60 @@ class Agent:
             sources.append(citation(chunk))
         return Answer("\n".join(parts), intent="product_guidance", sources=sources)
 
+    def _finalize(self, answer, question, temperature, context_window):
+        answer.temperature = round(float(temperature), 2)
+        answer.context_window = int(context_window)
+        # Approximate tokens: base system instructions (120) + prompt tokens + answer tokens
+        prompt_tokens = math.ceil(len(question) / 4)
+        response_tokens = math.ceil(len(answer.text) / 4)
+        answer.tokens_used = 120 + prompt_tokens + response_tokens
+        return answer
+
     # -- main entry point --------------------------------------------------
-    def ask(self, customer_id, question):
+    def ask(self, customer_id, question, temperature=0.1, context_window=2048):
         question = (question or "").strip()
         if not question:
-            return Answer("Please ask a question, for example about your account, "
-                          "a ticket, or a product.", intent="unknown", escalated=True)
+            ans = Answer("Please ask a question, for example about your account, "
+                         "a ticket, or a product.", intent="unknown", escalated=True)
+            return self._finalize(ans, question, temperature, context_window)
+
         reason = self._escalation_reason(question)
         if reason:
             note = (f"Customer {customer_id} asked: '{question}'. "
                     f"Escalation reason: {reason}. No action was taken by the agent.")
-            return Answer(
+            ans = Answer(
                 "I understand, and I am not going to guess or take that action "
                 "here. I have prepared a handoff for a human agent with your "
                 "question and account context, so you will not have to repeat "
                 "yourself. An agent will pick this up and confirm the next step "
                 "with you directly.",
                 intent="escalation", escalated=True, handoff_note=note)
+            return self._finalize(ans, question, temperature, context_window)
+
         intent = self._intent(question)
         if intent == "account_question":
-            return self._account_answer(customer_id)
+            ans = self._account_answer(customer_id)
+            return self._finalize(ans, question, temperature, context_window)
         if intent == "ticket_status":
-            return self._ticket_answer(customer_id, question)
+            ans = self._ticket_answer(customer_id, question)
+            return self._finalize(ans, question, temperature, context_window)
         if intent == "product_guidance":
-            return self._product_answer(question)
+            ans = self._product_answer(question)
+            return self._finalize(ans, question, temperature, context_window)
+
         # Greetings
         q_clean = question.lower().strip().rstrip("!?.,")
         if q_clean in ["hi", "hello", "hey", "good morning", "good afternoon", "good evening", "greetings"]:
-            return Answer("Hello! I am your Customer Service Copilot. I can help you check your account balance and recent transactions, look up support tickets, or answer questions about our banking policies. How can I assist you today?",
-                          intent="greeting", escalated=False)
+            ans = Answer("Hello! I am your Customer Service Copilot. I can help you check your account balance and recent transactions, look up support tickets, or answer questions about our banking policies. How can I assist you today?",
+                         intent="greeting", escalated=False)
+            return self._finalize(ans, question, temperature, context_window)
 
         # Unknown / General: try retrieval once, otherwise deflect politely without escalating
         results = self.retriever.retrieve(question, top_k=1)
         if results and results[0][0] >= 0.30:
-            return self._product_answer(question)
-        return Answer("I am your Customer Service Copilot, specialized in assisting with your accounts, recent transactions, support tickets, and banking policies. I don't have information on general topics outside of our banking services, but I'm happy to help with any account or ticket inquiry!",
-                      intent="out_of_scope", escalated=False)
+            ans = self._product_answer(question)
+            return self._finalize(ans, question, temperature, context_window)
+
+        ans = Answer("I am your Customer Service Copilot, specialized in assisting with your accounts, recent transactions, support tickets, and banking policies. I don't have information on general topics outside of our banking services, but I'm happy to help with any account or ticket inquiry!",
+                     intent="out_of_scope", escalated=False)
+        return self._finalize(ans, question, temperature, context_window)

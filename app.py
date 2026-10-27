@@ -93,6 +93,22 @@ else:
             st.markdown(f"**Verified Contact:** `{mask_email(cust['email'])}`")
         
         st.divider()
+        st.subheader("⚙️ Model & Context")
+        temperature = st.slider(
+            "Temperature",
+            min_value=0.0,
+            max_value=1.0,
+            value=0.1,
+            step=0.05,
+            help="Controls determinism. In enterprise customer service, low temperature (0.0 - 0.2) enforces strict compliance and eliminates hallucinations."
+        )
+        context_window = st.select_slider(
+            "Context Window",
+            options=[1024, 2048, 4096, 8192],
+            value=2048,
+            help="Maximum token budget allocated per turn, including customer record state and retrieved policy documents."
+        )
+
         st.caption("🔒 **Tenant Isolation:** All database and ticket queries in this session are strictly scoped to `customer_id`.")
         
         if st.button("Log Out / Switch Persona", use_container_width=True):
@@ -115,13 +131,20 @@ else:
             if msg.get("handoff_note"):
                 st.info(f"📋 **Handoff Note (for human agent):**\n\n*{msg['handoff_note']}*")
 
+            if msg.get("tokens_used"):
+                st.caption(
+                    f"⚙️ **Inference:** Temp `{msg.get('temperature', 0.1):.2f}` • "
+                    f"Context Window `{msg.get('context_window', 2048):,} tokens` • "
+                    f"Used `{msg.get('tokens_used', 0)} tokens`"
+                )
+
     # Real-time chat input field
     if prompt := st.chat_input("Ask about your account, a ticket, or product policies..."):
         # 1. Append user turn
         st.session_state.messages.append({"role": "user", "content": prompt})
 
-        # 2. Query Copilot Agent
-        answer = agent.ask(customer_id, prompt)
+        # 2. Query Copilot Agent with temperature and context window
+        answer = agent.ask(customer_id, prompt, temperature=temperature, context_window=context_window)
 
         # 3. Append assistant turn
         st.session_state.messages.append({
@@ -130,6 +153,9 @@ else:
             "intent": answer.intent,
             "sources": answer.sources,
             "escalated": answer.escalated,
-            "handoff_note": answer.handoff_note
+            "handoff_note": answer.handoff_note,
+            "temperature": answer.temperature,
+            "context_window": answer.context_window,
+            "tokens_used": answer.tokens_used
         })
         st.rerun()

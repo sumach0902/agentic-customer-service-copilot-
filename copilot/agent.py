@@ -99,7 +99,7 @@ class Agent:
         return "unknown"
 
     # -- tools (read-only) ------------------------------------------------
-    def _account_answer(self, customer_id):
+    def _account_answer(self, customer_id, question=""):
         customer = data.get_customer(self.db_path, customer_id)
         account = data.get_account(self.db_path, customer_id)
         activity = data.get_recent_activity(self.db_path, customer_id)
@@ -108,6 +108,33 @@ class Agent:
                           "Please check the ID and try again, or ask for a human handoff.",
                           intent="account_question", escalated=True,
                           handoff_note="Customer ID not found.")
+
+        q = (question or "").lower()
+        has_balance = "balance" in q or "how much" in q
+        has_status = "status" in q or "state" in q or "is my account active" in q
+        has_activity = "activity" in q or "transaction" in q or "recent" in q
+
+        source = "Snowflake CUSTOMER_ACCOUNTS and ACTIVITY_HISTORY (local demo copy)"
+
+        # 1. Targeted: Balance only
+        if has_balance and not has_status and not has_activity:
+            text = f"Hi {customer['name']}, your current balance for {account['account_type']} {account['display_number']} is ${account['balance']:,.2f}."
+            return Answer(text, intent="account_question", sources=[source])
+
+        # 2. Targeted: Status only
+        if has_status and not has_balance and not has_activity:
+            text = f"Hi {customer['name']}, your {account['account_type']} account {account['display_number']} is currently {account['status']} (opened on {account['opened_date']})."
+            return Answer(text, intent="account_question", sources=[source])
+
+        # 3. Targeted: Recent Activity / Transactions only
+        if has_activity and not has_balance and not has_status:
+            lines = [f"Hi {customer['name']}, here is your recent activity for {account['account_type']} {account['display_number']}:"]
+            for item in activity:
+                sign = "+" if item["direction"] == "Credit" else "-"
+                lines.append(f"- {item['activity_date']}: {item['description']} ({sign}${abs(item['amount']):,.2f})")
+            return Answer("\n".join(lines), intent="account_question", sources=[source])
+
+        # 4. Comprehensive summary (when multiple aspects or summary requested)
         lines = [
             f"Hi {customer['name']}, here is your account summary:",
             f"Account: {account['account_type']} {account['display_number']} - Status: {account['status']}",
@@ -122,7 +149,6 @@ class Agent:
         lines.append("Contact on file: "
                      f"{mask_email(customer['email'])}, {mask_phone(customer['phone'])} "
                      "(masked for privacy).")
-        source = "Snowflake CUSTOMER_ACCOUNTS and ACTIVITY_HISTORY (local demo copy)"
         return Answer("\n".join(lines), intent="account_question", sources=[source])
 
     def _ticket_answer(self, customer_id, question):
@@ -191,7 +217,7 @@ class Agent:
 
         intent = self._intent(question)
         if intent == "account_question":
-            ans = self._account_answer(customer_id)
+            ans = self._account_answer(customer_id, question)
             return self._finalize(ans, question, temperature, context_window)
         if intent == "ticket_status":
             ans = self._ticket_answer(customer_id, question)
